@@ -5,6 +5,7 @@
 import argparse
 import yaml
 from matplotlib import cm
+from matplotlib import pyplot as plt
 
 from pylab import *
 
@@ -36,7 +37,7 @@ def parse_yaml(f):
 # get the set of all i-th bars in the clusters
 def getBars(clusters,i):
     bars = []
-    
+
     for cluster in clusters:
         bars.append(cluster[i])
 
@@ -53,12 +54,10 @@ def graph(g):
     clusters = g['clusters'] # the actual data
 
     # create a figure
-    figure(figsize=(8,7),dpi=80)
-
-    ax = subplot(1,1,1)
+    fig, ax = plt.subplots()
 
     # max width of bar
-    maxwidth = 0.8
+    maxwidth = 0.7
     barwidth = maxwidth
 
     # pass number of "clusters" to np.arrange
@@ -72,9 +71,9 @@ def graph(g):
         Ys = getBars(g['clusters'],i)
         bars.append(ax.bar(X+i*barwidth, Ys, width=barwidth, facecolor=cm.jet(1.0*i/len(bar_labels)), edgecolor="black"))
         # now label values
-        for x,y in zip(X,Ys):
-            ax.text(x+barwidth*(0.5+i), y, y, ha="center", va="bottom")
-    
+        #for x,y in zip(X,Ys):
+        #    ax.text(x+barwidth*(0.5+i), y, y, ha="center", va="bottom")
+
     # asthetics...
     ax.set_title(title)         #title
     ax.set_xlabel(x_label)  #X-label
@@ -82,12 +81,20 @@ def graph(g):
     ax.set_xticklabels(cluster_labels) #X-benchmark labels
     ax.set_xticks(X+maxwidth/2)    #center labels
 
-    ylim([0, 1.2*max([max(cluster) for cluster in clusters])])
+    # rotate labels
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(90)
+
+    xlim([0, len(cluster_labels)])
+    ylim([0, 1.1*max([max(cluster) for cluster in clusters])])
 
     #legend
-    ax.legend(bars,bar_labels,bbox_to_anchor=(1.13, 1.05))
+    lgd = ax.legend(bars, bar_labels, bbox_to_anchor=(0.80, -0.3), ncol=2, fancybox=True)
 
-    savefig(title+".pdf", dpi=72)
+    # fix spacing issues
+    fig.tight_layout()
+
+    savefig(title+".pdf", dpi=80, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 def main():
     # Parse arguments
