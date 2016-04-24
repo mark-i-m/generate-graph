@@ -2,23 +2,12 @@
 
 # Special thanks to Ellis Michael for YAML parsing code
 
-import argparse
+from sys import argv, exit
 import yaml
 from matplotlib import cm
 from matplotlib import pyplot as plt
 
 from pylab import *
-
-#########################################
-## PARSE COMMAND LINE ARGS
-#########################################
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input',
-        type=argparse.FileType('r'), required=True)
-
-    return vars(parser.parse_args())
 
 #########################################
 ## PARSE DATA
@@ -43,8 +32,7 @@ def getBars(clusters,i):
 
     return bars
 
-def graph(g):
-
+def graph(g, out_file_base, graph_num, num_graphs):
     # extract graph info
     title   = g['title']
     y_label = g['y-axis']
@@ -53,7 +41,11 @@ def graph(g):
     cluster_labels = g['cluster-labels'] # each cluster
     clusters = g['clusters'] # the actual data
 
+    overlap = False
+
     # create a figure
+    #fig, ax = plt.subplots(figsize=(100, 5))
+    #fig, ax = plt.subplots(figsize=(15, 5))
     fig, ax = plt.subplots()
 
     # max width of bar
@@ -65,11 +57,15 @@ def graph(g):
 
     # draw bars
     barsPerCluster = len(bar_labels)
-    barwidth = maxwidth / barsPerCluster
+    if not overlap:
+        barwidth = maxwidth / barsPerCluster
     bars = []
     for i in range(barsPerCluster):
         Ys = getBars(g['clusters'],i)
-        bars.append(ax.bar(X+i*barwidth, Ys, width=barwidth, facecolor=cm.jet(1.0*i/len(bar_labels)), edgecolor="black"))
+        if overlap:
+            bars.append(ax.bar(X+0*barwidth, Ys, width=barwidth, facecolor=cm.jet(1.0*i/len(bar_labels)), edgecolor="black"))
+        else:
+            bars.append(ax.bar(X+i*barwidth, Ys, width=barwidth, facecolor=cm.jet(1.0*i/len(bar_labels)), edgecolor="black"))
         # now label values
         #for x,y in zip(X,Ys):
         #    ax.text(x+barwidth*(0.5+i), y, y, ha="center", va="bottom")
@@ -89,24 +85,36 @@ def graph(g):
     ylim([0, 1.1*max([max(cluster) for cluster in clusters])])
 
     #legend
-    lgd = ax.legend(bars, bar_labels, bbox_to_anchor=(0.80, -0.3), ncol=2, fancybox=True)
+    if len(bar_labels) > 1:
+        lgd = ax.legend(bars, bar_labels, bbox_to_anchor=(0.80, -0.3), ncol=2, fancybox=True)
 
     # fix spacing issues
     fig.tight_layout()
 
-    savefig(title+".pdf", dpi=80, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    if num_graphs > 1:
+        save_name = "%s_%s" % (str(graph_num),out_file_base)
+    else:
+        save_name = out_file_base
 
-def main():
+    if len(bar_labels) > 1:
+        savefig(save_name, dpi=80, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    else:
+        savefig(save_name, dpi=80, bbox_inches='tight')
+
+if __name__ == '__main__':
     # Parse arguments
-    args = parse_args()
-    input_file = args['input']
+    if len(argv) < 3:
+        print("Usage: ./generate-graph.py <.yaml file> <output filename base>")
+        exit(1)
+
+    input_file_name = argv[1]
+    out_file_base = argv[2]
+
+    input_file = open(input_file_name, 'r')
 
     # parse yaml to find out what graphs we need to make
     graphs = parse_yaml(input_file)
 
     # generate each graph
-    for g in graphs:
-        graph(g)
-
-if __name__ == '__main__':
-    main()
+    for i in range(len(graphs)):
+        graph(graphs[i], out_file_base, i, len(graphs))
